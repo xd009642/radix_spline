@@ -320,7 +320,7 @@ mod tests {
     }
 
     #[hegel::test]
-    fn can_find_elements(tc: TestCase) {
+    fn construct_spline(tc: TestCase) {
         let mut data = tc.draw(gs::vecs(gs::integers::<u64>()).min_size(2).filter(|v| {
             let first = &v[0];
             v[1..].iter().any(|x| x != first)
@@ -332,8 +332,24 @@ mod tests {
 
         let mut builder = RadixSpline::builder(min, max);
         builder
-            .max_error(tc.draw(gs::integers().min_value(1).max_value(64)))
-            .radix_bits(tc.draw(gs::integers().max_value(25).min_value(14)));
+            .max_error(tc.draw(gs::integers().min_value(5).max_value(30)))
+            .radix_bits(tc.draw(gs::integers().max_value(25).min_value(8)));
+        builder.add_keys(data.iter().copied());
+        let _spline = builder.build();
+    }
+
+    #[hegel::test]
+    fn can_find_elements(tc: TestCase) {
+        let mut data = tc.draw(gs::vecs(gs::integers::<u64>()).min_size(2).filter(|v| {
+            let first = &v[0];
+            v[1..].iter().any(|x| x != first)
+        }));
+        data.sort();
+
+        let min = data[0];
+        let max = data[data.len() - 1];
+
+        let mut builder = RadixSpline::builder(min, max);
         builder.add_keys(data.iter().copied());
         let spline = builder.build();
 

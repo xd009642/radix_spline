@@ -39,11 +39,11 @@ impl RadixSpline {
             let down = self.spline_points[index - 1];
             let up = self.spline_points[index];
 
-            let dx = up.0 as f64 - down.0 as f64;
+            let dx = (up.0 - down.0) as f64;
             let dy = up.1 - down.1;
             let slope = dy / dx;
 
-            let dk = key as f64 - down.0 as f64;
+            let dk = (key - down.0) as f64;
             dk.mul_add(slope, down.1)
         }
     }
@@ -135,21 +135,24 @@ impl RadixSplineBuilder {
         self.radix_bits = radix_bits;
         self.shift_bits = num_shift_bits(self.max_key - self.min_key, radix_bits);
         let radix_table_capacity = ((self.max_key - self.min_key) >> self.shift_bits) as usize;
-        self.radix_table.resize(radix_table_capacity, 0);
+        self.radix_table.resize(radix_table_capacity + 2, 0);
         self
     }
 
     pub fn add_keys(&mut self, it: impl Iterator<Item = u64>) -> &mut Self {
-        for (pos, key) in it.enumerate() {
-            self.add_key(key, pos);
+        for key in it {
+            self.add_key(key);
         }
         self
     }
 
-    pub fn add_key(&mut self, key: u64, position: usize) -> &mut Self {
+    pub fn add_key(&mut self, key: u64) -> &mut Self {
         assert!(key >= self.min_key);
         assert!(key <= self.max_key);
         assert!(key >= self.previous_key);
+
+        let position = self.current_key_count;
+
         self.maybe_add_key_to_spline(key, position as f64);
 
         self.previous_key = key;
@@ -210,21 +213,21 @@ impl RadixSplineBuilder {
         if compute_orientation(upper_limit, delta) != Orientation::Clockwise
             || compute_orientation(lower_limit, delta) != Orientation::AntiClockwise
         {
-            let (key, dist) = self.previous_point;
-            self.add_key_to_spline(key, dist);
+            let (prev_key, dist) = self.previous_point;
+            self.add_key_to_spline(prev_key, dist);
             self.upper_limit = (key, upper_y);
             self.lower_limit = (key, lower_y);
         } else {
             assert!(upper_y >= last_distance);
             let upper_dy = upper_y - last_distance;
             if compute_orientation(upper_limit, (dx as f64, upper_dy)) == Orientation::Clockwise {
-                self.upper_limit = (key, upper_dy);
+                self.upper_limit = (key, upper_y);
             }
 
             let lower_dy = lower_y - last_distance;
             if compute_orientation(lower_limit, (dx as f64, lower_dy)) == Orientation::AntiClockwise
             {
-                self.lower_limit = (key, lower_dy);
+                self.lower_limit = (key, lower_y);
             }
         }
         self.previous_point = (key, position);

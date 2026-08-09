@@ -86,7 +86,6 @@ pub struct RadixSplineBuilder {
     previous_prefix: u64,
 
     radix_table: Vec<u32>,
-    // TODO generic coord type
     spline_points: Vec<(u64, f64)>,
     current_key_count: usize,
     distinct_key_count: usize,
@@ -308,7 +307,6 @@ mod tests {
     use super::*;
     use hegel::TestCase;
     use hegel::generators::{self as gs, Generator};
-    use std::collections::BTreeSet;
 
     #[test]
     fn basic_behavioural() {
@@ -333,12 +331,16 @@ mod tests {
         let max = data[data.len() - 1];
 
         let mut builder = RadixSpline::builder(min, max);
+        builder
+            .max_error(tc.draw(gs::integers().min_value(1).max_value(64)))
+            .radix_bits(tc.draw(gs::integers().max_value(25).min_value(14)));
         builder.add_keys(data.iter().copied());
         let spline = builder.build();
 
         let search_for = tc.draw(gs::sampled_from(&data));
 
         for i in spline.find(search_for) {
+            assert!(data[i] <= search_for);
             if data[i] == search_for {
                 return;
             }

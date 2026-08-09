@@ -321,10 +321,15 @@ mod tests {
 
     #[hegel::test]
     fn construct_spline(tc: TestCase) {
-        let mut data = tc.draw(gs::vecs(gs::integers::<u64>()).min_size(2).filter(|v| {
-            let first = &v[0];
-            v[1..].iter().any(|x| x != first)
-        }));
+        let mut data = tc.draw(
+            gs::vecs(gs::integers::<u64>())
+                .min_size(2)
+                .max_size(20)
+                .filter(|v| {
+                    let first = &v[0];
+                    v[1..].iter().any(|x| x != first)
+                }),
+        );
         data.sort();
 
         let min = data[0];
@@ -362,5 +367,30 @@ mod tests {
             }
         }
         panic!("Didn't find element");
+    }
+
+    #[hegel::test]
+    #[should_panic]
+    fn data_must_be_sorted(tc: TestCase) {
+        let data = tc.draw(
+            gs::vecs(gs::integers::<u64>())
+                .min_size(2)
+                .filter(|v| {
+                    let first = &v[0];
+                    v[1..].iter().any(|x| x != first)
+                })
+                .filter(|v| {
+                    let mut x = v.clone();
+                    x.sort();
+
+                    v != &x
+                }),
+        );
+
+        let min = data.iter().copied().min().unwrap();
+        let max = data.iter().copied().max().unwrap();
+
+        let mut builder = RadixSpline::builder(min, max);
+        builder.add_keys(data.iter().copied());
     }
 }

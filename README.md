@@ -1,24 +1,13 @@
-GreedySplineCorridor
-    Input: a spline S,|S|=n and an error corridor size e 
-    Output: a spline connecting S[1],S[n] through the corridor
+# radix_spline
 
-    B=S[1],R=<B> // S[1] is the first base point
-    U=S[2] + e, L =S[2] −e // error corridor bounds
+Implementation of RadixSpline ([paper](https://dl.acm.org/doi/10.1145/3401071.3401659)) 
+in Rust. 
 
-    for i=3 to n
-        C=S[i]
-        if BC is left of BU or right of BL
-            B=S[i−1],R=R◦<B>
-            U=C+e, L =C−e
-        else
-            U'=C+e, L'=C−e
-            if BU is left of BU'
-                U=U'
-            if BL is right of BL'
-                L=L'
-    R=R◦<S[n]>
-    return R
+This is currently, a work-in-progress for my own fun/learnings.
 
+## References
 
-1. Take sorted keys
-2. Build GreedySplineCorridor
+As well as the paper _RadixSpline: a single-pass learned index_, the
+[reference C++ implementation](https://github.com/learnedsystems/RadixSpline)
+was consulted. This project as a result is also licensed under the MIT license
+although the code will likely diverge to be more Rusty.

@@ -17,7 +17,6 @@ pub struct RadixSpline {
     min_key: u64,
     max_key: u64,
     current_key_count: usize,
-    radix_bits: u64,
     shift_bits: u64,
     max_error: f64, // Was f64 in original impl
     radix_table: Vec<u32>,
@@ -200,8 +199,8 @@ impl RadixSplineBuilder {
         assert!(self.upper_limit.1 >= last_distance);
         assert!(position >= last_distance);
 
-        let upper_limit_dy = (self.upper_limit.1 - last_distance) as f64;
-        let lower_limit_dy = (self.lower_limit.1 - last_distance) as f64;
+        let upper_limit_dy = self.upper_limit.1 - last_distance;
+        let lower_limit_dy = self.lower_limit.1 - last_distance;
         let dy = position - last_distance;
 
         let upper_limit = (upper_limit_dx, upper_limit_dy);
@@ -276,7 +275,6 @@ impl RadixSplineBuilder {
             min_key: self.min_key,
             max_key: self.max_key,
             current_key_count: self.current_key_count,
-            radix_bits: self.radix_bits,
             shift_bits: self.shift_bits,
             max_error: self.max_error,
             radix_table: self.radix_table,

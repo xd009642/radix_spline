@@ -306,10 +306,12 @@ fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hegel::TestCase;
+    use hegel::generators::{self as gs, Generator};
+    use std::collections::BTreeSet;
 
     #[test]
     fn basic_behavioural() {
-        let data = (0u64..=1000u64).collect::<Vec<_>>();
         let mut builder = RadixSpline::builder(0, 1000);
         builder.add_keys(0..=1000);
         let spline = builder.build();
@@ -317,5 +319,30 @@ mod tests {
         let range = spline.find(50);
 
         assert!(range.contains(&50));
+    }
+
+    #[hegel::test]
+    fn can_find_elements(tc: TestCase) {
+        let mut data = tc.draw(gs::vecs(gs::integers::<u64>()).min_size(2).filter(|v| {
+            let first = &v[0];
+            v[1..].iter().any(|x| x != first)
+        }));
+        data.sort();
+
+        let min = data[0];
+        let max = data[data.len() - 1];
+
+        let mut builder = RadixSpline::builder(min, max);
+        builder.add_keys(data.iter().copied());
+        let spline = builder.build();
+
+        let search_for = tc.draw(gs::sampled_from(&data));
+
+        for i in spline.find(search_for) {
+            if data[i] == search_for {
+                return;
+            }
+        }
+        panic!("Didn't find element");
     }
 }

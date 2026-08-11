@@ -360,7 +360,10 @@ mod tests {
 
         let search_for = tc.draw(gs::sampled_from(&data));
 
-        for i in spline.find(search_for) {
+        let range = spline.find(search_for);
+        let max_width = 2 * spline.max_error as usize + 2;
+        assert!(range.len() <= max_width);
+        for i in range {
             assert!(data[i] <= search_for);
             if data[i] == search_for {
                 return;
@@ -407,11 +410,14 @@ mod tests {
         builder.add_keys(data.iter().copied());
         let spline = builder.build();
 
+        let max_width = 2 * spline.max_error as usize + 2;
+
         let selected = kani::any::<u8>() as usize;
         kani::assume(selected < data.len());
 
         let search_for = data[selected];
         let range = spline.find(search_for);
+        assert!(range.len() <= max_width);
 
         let mut found = false;
         for index in range {
@@ -425,6 +431,8 @@ mod tests {
         kani::assume(arbitrary_key <= 280);
 
         let range = spline.find(arbitrary_key);
+
+        assert!(range.len() <= max_width);
         assert!(range.start <= range.end);
         assert!(range.end <= data.len());
     }

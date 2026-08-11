@@ -421,11 +421,12 @@ mod tests {
         }
         assert!(found);
 
-        let range = spline.find(0);
-        let _candidates = &data[range];
+        let arbitrary_key = u64::from(kani::any::<u16>());
+        kani::assume(arbitrary_key <= 280);
 
-        let range = spline.find(280);
-        let _candidates = &data[range];
+        let range = spline.find(arbitrary_key);
+        assert!(range.start <= range.end);
+        assert!(range.end <= data.len());
     }
 
     #[cfg(kani)]

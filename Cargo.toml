@@ -8,3 +8,6 @@ license = "MIT"
 
 [dev-dependencies]
 hegeltest = "0.29.3"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }

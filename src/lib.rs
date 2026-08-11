@@ -393,4 +393,32 @@ mod tests {
         let mut builder = RadixSpline::builder(min, max);
         builder.add_keys(data.iter().copied());
     }
+
+    #[cfg(kani)]
+    #[kani::proof]
+    fn shift_bits_valid() {
+        let diff: u64 = kani::any();
+        let radix_bits: u64 = kani::any();
+        kani::assume(diff > 0); 
+        kani::assume(radix_bits > 0); 
+        kani::assume(radix_bits <= 64); 
+
+        num_shift_bits(diff, radix_bits);
+    }
+
+
+    #[cfg(kani)]
+    #[kani::proof]
+    fn compute_orientation_numerically_safe() {
+        let x1: u64 = kani::any();
+        let y1: f64 = kani::any();
+        let x2: u64 = kani::any();
+        let y2: f64 = kani::any();
+
+
+        kani::assume(y1 >= 0.0 && y1 < u64::MAX as f64);
+        kani::assume(y2 >= 0.0 && y2 < u64::MAX as f64);
+
+        compute_orientation((x1 as f64, y1), (x2 as f64, y2));
+    }
 }

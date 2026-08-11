@@ -407,11 +407,24 @@ mod tests {
         builder.add_keys(data.iter().copied());
         let spline = builder.build();
 
-        let search_for: u64 = kani::any::<u16>() as u64;
-        kani::assume(search_for < 281);
+        let selected = kani::any::<u8>() as usize;
+        kani::assume(selected < data.len());
 
+        let search_for = data[selected];
         let range = spline.find(search_for);
-        // I feel the range should always be valid!
+
+        let mut found = false;
+        for index in range {
+            if data[index] == search_for {
+                found = true;
+            }
+        }
+        assert!(found);
+
+        let range = spline.find(0);
+        let _candidates = &data[range];
+
+        let range = spline.find(280);
         let _candidates = &data[range];
     }
 

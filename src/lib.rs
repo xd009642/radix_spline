@@ -399,13 +399,12 @@ mod tests {
     fn shift_bits_valid() {
         let diff: u64 = kani::any();
         let radix_bits: u64 = kani::any();
-        kani::assume(diff > 0); 
-        kani::assume(radix_bits > 0); 
-        kani::assume(radix_bits <= 64); 
+        kani::assume(diff > 0);
+        kani::assume(radix_bits > 0);
+        kani::assume(radix_bits <= 64);
 
         num_shift_bits(diff, radix_bits);
     }
-
 
     #[cfg(kani)]
     #[kani::proof]
@@ -414,7 +413,6 @@ mod tests {
         let y1: f64 = kani::any();
         let x2: u64 = kani::any();
         let y2: f64 = kani::any();
-
 
         kani::assume(y1 >= 0.0 && y1 < u64::MAX as f64);
         kani::assume(y2 >= 0.0 && y2 < u64::MAX as f64);

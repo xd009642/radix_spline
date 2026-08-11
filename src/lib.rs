@@ -396,6 +396,27 @@ mod tests {
 
     #[cfg(kani)]
     #[kani::proof]
+    #[kani::unwind(16)]
+    fn spline_searching_checks() {
+        let data = vec![
+            1, 2, 3, 55, 56, 57, 110, 111, 112, 165, 166, 167, 277, 278, 279,
+        ];
+        let mut builder = RadixSpline::builder(1, 279);
+        builder.max_error(3);
+        builder.radix_bits(4);
+        builder.add_keys(data.iter().copied());
+        let spline = builder.build();
+
+        let search_for: u64 = kani::any::<u16>() as u64;
+        kani::assume(search_for < 281);
+
+        let range = spline.find(search_for);
+        // I feel the range should always be valid!
+        let _candidates = &data[range];
+    }
+
+    #[cfg(kani)]
+    #[kani::proof]
     fn shift_bits_valid() {
         let diff: u64 = kani::any();
         let radix_bits: u64 = kani::any();

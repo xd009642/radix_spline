@@ -13,22 +13,32 @@ enum Orientation {
     Colinear,
 }
 
-pub struct RadixSpline {
-    min_key: u64,
-    max_key: u64,
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub struct RadixSpline<K> {
+    min_key: K,
+    max_key: K,
     current_key_count: usize,
-    shift_bits: u64,
-    max_error: f64, // Was f64 in original impl
+    shift_bits: usize,
+    max_error: f64,
     radix_table: Vec<u32>,
-    spline_points: Vec<(u64, f64)>,
+    spline_points: Vec<(K, f64)>,
 }
 
-impl RadixSpline {
-    pub fn builder(min_key: u64, max_key: u64) -> RadixSplineBuilder {
+impl<K> RadixSpline<K>
+where
+    K: Key,
+{
+    pub fn builder(min_key: K, max_key: K) -> RadixSplineBuilder<K> {
         RadixSplineBuilder::new(min_key, max_key)
     }
 
-    fn estimated_position(&self, key: u64) -> f64 {
+    pub fn size_in_bytes(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + self.radix_table.capacity() * std::mem::size_of::<u32>()
+            + self.spline_points.capacity() * std::mem::size_of::<(K, f64)>()
+    }
+
+    fn estimated_position(&self, key: K) -> f64 {
         if key <= self.min_key {
             0.0
         } else if key >= self.max_key {
@@ -38,17 +48,19 @@ impl RadixSpline {
             let down = self.spline_points[index - 1];
             let up = self.spline_points[index];
 
-            let dx = (up.0 - down.0) as f64;
+            let dx = (up.0 - down.0).to_f64();
             let dy = up.1 - down.1;
             let slope = dy / dx;
 
-            let dk = (key - down.0) as f64;
+            let dk = (key - down.0).to_f64();
             dk.mul_add(slope, down.1)
         }
     }
 
-    fn get_spline_segment(&self, key: u64) -> usize {
-        let prefix = ((key - self.min_key) >> self.shift_bits) as usize;
+    fn get_spline_segment(&self, key: K) -> usize {
+        let prefix = ((key - self.min_key) >> self.shift_bits)
+            .to_usize()
+            .expect("radix prefix does not fit in usize");
         assert!(prefix + 1 < self.radix_table.len());
 
         let begin = self.radix_table[prefix] as usize;
@@ -65,7 +77,7 @@ impl RadixSpline {
         }
     }
 
-    pub fn find(&self, key: u64) -> Range<usize> {
+    pub fn find(&self, key: K) -> Range<usize> {
         let est_pos = self.estimated_position(key);
         let begin = (est_pos - self.max_error).max(0.0) as usize;
         let end = ((est_pos + self.max_error) as usize + 2).min(self.current_key_count);
@@ -73,32 +85,38 @@ impl RadixSpline {
     }
 }
 
-pub struct RadixSplineBuilder {
-    min_key: u64,
-    max_key: u64,
+pub struct RadixSplineBuilder<Key> {
+    min_key: Key,
+    max_key: Key,
     radix_bits: u64,
-    shift_bits: u64,
+    shift_bits: usize,
     max_error: f64,
 
-    previous_key: u64,
+    previous_key: Key,
     previous_position: u64,
-    previous_point: (u64, f64),
-    previous_prefix: u64,
+    previous_point: (Key, f64),
+    previous_prefix: usize,
 
     radix_table: Vec<u32>,
-    spline_points: Vec<(u64, f64)>,
+    spline_points: Vec<(Key, f64)>,
     current_key_count: usize,
     distinct_key_count: usize,
-    upper_limit: (u64, f64),
-    lower_limit: (u64, f64),
+    upper_limit: (Key, f64),
+    lower_limit: (Key, f64),
 }
 
-impl RadixSplineBuilder {
-    pub fn new(min_key: u64, max_key: u64) -> Self {
+impl<K> RadixSplineBuilder<K>
+where
+    K: Key,
+{
+    pub fn new(min_key: K, max_key: K) -> Self {
         assert!(min_key < max_key);
         let radix_bits = 18;
         let shift_bits = num_shift_bits(max_key - min_key, radix_bits);
-        let radix_table_capacity = ((max_key - min_key) >> shift_bits) as usize + 2;
+        let radix_table_capacity = ((max_key - min_key) >> shift_bits)
+            .to_usize()
+            .expect("radix table size does not fit in usize")
+            + 2;
         Self {
             min_key,
             max_key,
@@ -111,9 +129,9 @@ impl RadixSplineBuilder {
             spline_points: vec![],
             current_key_count: 0,
             distinct_key_count: 0,
-            upper_limit: (0, 0.0),
-            lower_limit: (0, 0.0),
-            previous_point: (0, 0.0),
+            upper_limit: (K::zero(), 0.0),
+            lower_limit: (K::zero(), 0.0),
+            previous_point: (K::zero(), 0.0),
             previous_position: 0,
         }
     }
@@ -132,19 +150,21 @@ impl RadixSplineBuilder {
         }
         self.radix_bits = radix_bits;
         self.shift_bits = num_shift_bits(self.max_key - self.min_key, radix_bits);
-        let radix_table_capacity = ((self.max_key - self.min_key) >> self.shift_bits) as usize;
+        let radix_table_capacity = ((self.max_key - self.min_key) >> self.shift_bits)
+            .to_usize()
+            .expect("radix table size does not fit in usize");
         self.radix_table.resize(radix_table_capacity + 2, 0);
         self
     }
 
-    pub fn add_keys(&mut self, it: impl Iterator<Item = u64>) -> &mut Self {
+    pub fn add_keys(&mut self, it: impl Iterator<Item = K>) -> &mut Self {
         for key in it {
             self.add_key(key);
         }
         self
     }
 
-    pub fn add_key(&mut self, key: u64) -> &mut Self {
+    pub fn add_key(&mut self, key: K) -> &mut Self {
         assert!(key >= self.min_key);
         assert!(key <= self.max_key);
         assert!(key >= self.previous_key);
@@ -161,7 +181,7 @@ impl RadixSplineBuilder {
     }
 
     // GreedySplineCorridor implementation
-    fn maybe_add_key_to_spline(&mut self, key: u64, position: f64) {
+    fn maybe_add_key_to_spline(&mut self, key: K, position: f64) {
         if self.current_key_count == 0 {
             self.distinct_key_count += 1;
             self.add_key_to_spline(key, position);
@@ -191,8 +211,8 @@ impl RadixSplineBuilder {
         assert!(self.lower_limit.0 >= last_point);
         assert!(key >= last_point);
 
-        let upper_limit_dx = (self.upper_limit.0 - last_point) as f64;
-        let lower_limit_dx = (self.lower_limit.0 - last_point) as f64;
+        let upper_limit_dx = (self.upper_limit.0 - last_point).to_f64();
+        let lower_limit_dx = (self.lower_limit.0 - last_point).to_f64();
         let dx = key - last_point;
 
         assert!(self.upper_limit.1 >= last_distance);
@@ -204,7 +224,7 @@ impl RadixSplineBuilder {
 
         let upper_limit = (upper_limit_dx, upper_limit_dy);
         let lower_limit = (lower_limit_dx, lower_limit_dy);
-        let delta = (dx as f64, dy);
+        let delta = (dx.to_f64(), dy);
 
         assert_ne!(self.previous_point.0, last_point);
 
@@ -218,12 +238,13 @@ impl RadixSplineBuilder {
         } else {
             assert!(upper_y >= last_distance);
             let upper_dy = upper_y - last_distance;
-            if compute_orientation(upper_limit, (dx as f64, upper_dy)) == Orientation::Clockwise {
+            if compute_orientation(upper_limit, (dx.to_f64(), upper_dy)) == Orientation::Clockwise {
                 self.upper_limit = (key, upper_y);
             }
 
             let lower_dy = lower_y - last_distance;
-            if compute_orientation(lower_limit, (dx as f64, lower_dy)) == Orientation::AntiClockwise
+            if compute_orientation(lower_limit, (dx.to_f64(), lower_dy))
+                == Orientation::AntiClockwise
             {
                 self.lower_limit = (key, lower_y);
             }
@@ -231,23 +252,26 @@ impl RadixSplineBuilder {
         self.previous_point = (key, position);
     }
 
-    fn add_key_to_spline(&mut self, key: u64, position: f64) {
+    fn add_key_to_spline(&mut self, key: K, position: f64) {
         self.spline_points.push((key, position));
         self.maybe_add_key_to_radix_table(key);
     }
 
-    fn maybe_add_key_to_radix_table(&mut self, key: u64) {
-        let curr_prefix = (key - self.min_key) >> self.shift_bits;
+    fn maybe_add_key_to_radix_table(&mut self, key: K) {
+        let curr_prefix = ((key - self.min_key) >> self.shift_bits)
+            .to_usize()
+            .expect("radix prefix does not fit in usize");
         assert!(
-            curr_prefix < self.radix_table.len() as u64,
+            curr_prefix < self.radix_table.len(),
             "radix table contains {} elements but prefix is {}",
             self.radix_table.len(),
             curr_prefix
         );
         if curr_prefix != self.previous_prefix {
-            let index = self.spline_points.len() - 1;
+            let index = u32::try_from(self.spline_points.len() - 1)
+                .expect("radix spline contains more spline points than u32 can index");
             for i in (self.previous_prefix + 1)..=curr_prefix {
-                self.radix_table[i as usize] = index as u32;
+                self.radix_table[i] = index;
             }
             self.previous_prefix = curr_prefix;
         }
@@ -261,13 +285,14 @@ impl RadixSplineBuilder {
             self.add_key_to_spline(self.previous_key, self.previous_position as f64);
         }
 
-        let num_spline_points = self.spline_points.len() as u32;
-        for i in (self.previous_prefix as usize + 1)..self.radix_table.len() {
+        let num_spline_points = u32::try_from(self.spline_points.len())
+            .expect("radix spline contains more spline points than u32 can index");
+        for i in (self.previous_prefix + 1)..self.radix_table.len() {
             self.radix_table[i] = num_spline_points;
         }
     }
 
-    pub fn build(mut self) -> RadixSpline {
+    pub fn build(mut self) -> RadixSpline<K> {
         self.finalize();
 
         RadixSpline {
@@ -282,12 +307,12 @@ impl RadixSplineBuilder {
     }
 }
 
-fn num_shift_bits(diff: u64, radix_bits: u64) -> u64 {
-    let leading_zeros = diff.leading_zeros() as u64;
-    if 64 - leading_zeros < radix_bits {
+fn num_shift_bits<K: Key>(diff: K, radix_bits: u64) -> usize {
+    let significant_bits = u64::from(K::zero().count_zeros() - diff.leading_zeros());
+    if significant_bits < radix_bits {
         0
     } else {
-        64 - radix_bits - leading_zeros
+        usize::try_from(significant_bits - radix_bits).expect("shift count does not fit in usize")
     }
 }
 
@@ -302,6 +327,22 @@ fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
     }
 }
 
+pub trait Key: num_traits::PrimInt + num_traits::Unsigned + std::fmt::Debug {
+    fn to_f64(self) -> f64;
+}
+
+impl Key for u32 {
+    fn to_f64(self) -> f64 {
+        f64::from(self)
+    }
+}
+
+impl Key for u64 {
+    fn to_f64(self) -> f64 {
+        self as f64
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,13 +351,23 @@ mod tests {
 
     #[test]
     fn basic_behavioural() {
-        let mut builder = RadixSpline::builder(0, 1000);
+        let mut builder = RadixSpline::builder(0u64, 1000u64);
         builder.add_keys(0..=1000);
         let spline = builder.build();
 
         let range = spline.find(50);
 
         assert!(range.contains(&50));
+    }
+
+    /// A spline uses the key's native width without changing lookup behaviour.
+    #[test]
+    fn supports_u32_keys() {
+        let mut builder = RadixSpline::builder(0u32, 1000u32);
+        builder.add_keys(0..=1000);
+        let spline = builder.build();
+
+        assert!(spline.find(50).contains(&50));
     }
 
     #[hegel::test]
@@ -404,7 +455,7 @@ mod tests {
         let data = vec![
             1, 2, 3, 55, 56, 57, 110, 111, 112, 165, 166, 167, 277, 278, 279,
         ];
-        let mut builder = RadixSpline::builder(1, 279);
+        let mut builder = RadixSpline::builder(1u64, 279u64);
         builder.max_error(3);
         builder.radix_bits(4);
         builder.add_keys(data.iter().copied());

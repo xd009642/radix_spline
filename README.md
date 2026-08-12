@@ -9,20 +9,20 @@ A C API is provided via the radix_spline_c subproject.
 
 ## Performance
 
-Initial checks on performance show it as as similar to the C++ implementation 
-on the _Search On Sorted Data_ (SOSD) benchmark. Checking on the synthetic
-200M entry dataset the results are:
+The synthetic 200M and Wikipedia 200M datasets on SOSD (Search On Sorted Data)
+are used to benchmark. As the C API currently takes a contiguous array of keys
+I modified the benchmark to do the same for the C++ version. I then disabled -ffast-math
+and enabled -Ctarget-cpu=native on the Rust version so their two compiler flags
+were equivalent. When ffast-math is enabled the C++ version maintains a firm lead.
+
+Checking on the synthetic 200M entry dataset the results are:
 
 ![graph](./docs/uniform_dense_200M_uint64_rs_comparison.png)
 
 The Rust implementation needs to go via a shared object and the C bindings have
 to construct the object and box it added a layer of indirection. In comparison the
 original implementation can benefit from inlining and lesser indirection from the
-harness code. Because of this I'm not overly concerned with the gap in lookup latency.
-
-I have made some changes to the harness to replicate some of the copying that needs doing
-for the Rust C API design that the C++ version didn't do to try and make it more of an equal
-footing.
+harness code. 
 
 Contrastingly, I'm happy the index size is a consistent 8 bytes smaller (likely due to
 padding).

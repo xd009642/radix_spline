@@ -136,11 +136,11 @@ where
         }
     }
 
-    pub fn max_error(&mut self, max_error: u64) -> &mut Self {
+    pub fn max_error(&mut self, max_error: K) -> &mut Self {
         if self.current_key_count > 0 {
             panic!("Cannot change radix key after construction has started");
         }
-        self.max_error = max_error as f64;
+        self.max_error = max_error.to_f64();
         self
     }
 
@@ -294,6 +294,10 @@ where
 
     pub fn build(mut self) -> RadixSpline<K> {
         self.finalize();
+
+        // Avoid having a too large data structure
+        self.spline_points.shrink_to_fit();
+        self.radix_table.shrink_to_fit();
 
         RadixSpline {
             min_key: self.min_key,

@@ -20,9 +20,9 @@ to construct the object and box it added a layer of indirection. In comparison t
 original implementation can benefit from inlining and lesser indirection from the
 harness code. Because of this I'm not overly concerned with the gap in lookup latency.
 
-Likewise with the construction, the Rust one ends up having to copy the data and extract
-the keys with the current implementation resulting in a 1.6GB memcpy which C++ doesn't have
-to do in the benchmark. This likely explains the slower construction as well.
+I have made some changes to the harness to replicate some of the copying that needs doing
+for the Rust C API design that the C++ version didn't do to try and make it more of an equal
+footing.
 
 Contrastingly, I'm happy the index size is a consistent 8 bytes smaller (likely due to
 padding).

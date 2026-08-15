@@ -9,6 +9,7 @@ documentation = "https://docs.rs/radix_spline/"
 description = "Implementation of Radix Spline data structure."
 keywords = ["learned-index", "radix-spline", "data-structure", "sorted-data", "search"]
 categories = ["algorithms", "data-structures", "database-implementations"]
+include = ["src/lib.rs", "LICENSE", "README.md"]
 
 [dependencies]
 num-traits = "0.2.19"

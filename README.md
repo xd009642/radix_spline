@@ -1,9 +1,9 @@
 # radix_spline
 
 Implementation of RadixSpline ([paper](https://dl.acm.org/doi/10.1145/3401071.3401659)) 
-in Rust. 
-
-This is currently, a work-in-progress for my own fun/learnings.
+in Rust. This is mainly a learning experiment for me but it is functional, as such
+I believe it's fine for people to use if they so desire. The code is small though
+so anyone depending on it should consider just vendoring the implementation.
 
 A C API is provided via the radix_spline_c subproject.
 
@@ -17,7 +17,7 @@ were equivalent. When ffast-math is enabled the C++ version maintains a firm lea
 
 Checking on the synthetic 200M entry dataset the results are:
 
-![graph](./docs/uniform_dense_200M_uint64_rs_comparison.png)
+![graph](https://raw.githubusercontent.com/xd009642/radix_spline/main/docs/uniform_dense_200M_uint64_rs_comparison.png)
 
 The Rust implementation needs to go via a shared object and the C bindings have
 to construct the object and box it added a layer of indirection. In comparison the
@@ -29,7 +29,7 @@ padding).
 
 Running on the 200M wikipedia dataset we can see the lookup latency isn't as clear:
 
-![graph](./docs/wiki_ts_200M_uint64_rs_comparison.png)
+![graph](https://raw.githubusercontent.com/xd009642/radix_spline/main/docs/wiki_ts_200M_uint64_rs_comparison.png)
 
 As I continue working on this I'll be looking into more of what causes changes in
 performance. I may need to create a comparative harness in Rust for running the Rust

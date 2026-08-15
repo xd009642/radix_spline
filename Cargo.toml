@@ -3,6 +3,12 @@ name = "radix_spline"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/xd009642/radix_spline"
+documentation = "https://docs.rs/radix_spline/"
+description = "Implementation of Radix Spline data structure."
+keywords = ["learned-index", "radix-spline", "data-structure", "sorted-data", "search"]
+categories = ["algorithms", "data-structures", "database-implementations"]
 
 [dependencies]
 num-traits = "0.2.19"

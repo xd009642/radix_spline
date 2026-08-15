@@ -1,9 +1,4 @@
-//! stages:
-//!
-//! 1. Build spline (params: max_error)
-//! 2. Build radix table (params: radix_bits)
-//! 3. ???
-
+#![doc = include_str!("../README.md")]
 use std::ops::Range;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -13,6 +8,15 @@ enum Orientation {
     Colinear,
 }
 
+/// A RadixSpline is a read-only learned data structure built over a list of sorted data. This is
+/// the learned spline and can be used to estimate a range in a sorted list where an element can
+/// appear. It does this by fitting a spline over the data and using a radix table for quick lookups
+/// of spline segments that span a points value.
+///
+/// The key is generic over any unsigned integer but u32 and u64 are expected to be used. Using
+/// larger precision integers may result in numeric issues when casting them into f64 for distance
+/// calculations. Lower precision is likely not a large enough range of values to benefit from a
+/// RadixSpline.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct RadixSpline<K> {
     min_key: K,
@@ -28,10 +32,12 @@ impl<K> RadixSpline<K>
 where
     K: Key,
 {
+    /// Start building the RadixSpline given the minimum and maximum key values for the dataset.
     pub fn builder(min_key: K, max_key: K) -> RadixSplineBuilder<K> {
         RadixSplineBuilder::new(min_key, max_key)
     }
 
+    /// Current memory used by the structure. This is useful for benchmarking on storage efficiency.
     pub fn size_in_bytes(&self) -> usize {
         std::mem::size_of::<Self>()
             + self.radix_table.capacity() * std::mem::size_of::<u32>()
@@ -77,6 +83,7 @@ where
         }
     }
 
+    /// Given a point output a range which contains that value.
     pub fn find(&self, key: K) -> Range<usize> {
         let est_pos = self.estimated_position(key);
         let begin = (est_pos - self.max_error).max(0.0) as usize;
@@ -85,6 +92,7 @@ where
     }
 }
 
+/// Fluent builder API for the `RadixSpline`.
 pub struct RadixSplineBuilder<Key> {
     min_key: Key,
     max_key: Key,
@@ -109,6 +117,7 @@ impl<K> RadixSplineBuilder<K>
 where
     K: Key,
 {
+    /// Create a new builder.
     pub fn new(min_key: K, max_key: K) -> Self {
         assert!(min_key < max_key);
         let radix_bits = 18;
@@ -136,6 +145,11 @@ where
         }
     }
 
+    /// Change the max error corridor for the spline.
+    ///
+    /// # Panics
+    ///
+    /// This value cannot be changed after data has started to be input into the spline.
     pub fn max_error(&mut self, max_error: K) -> &mut Self {
         if self.current_key_count > 0 {
             panic!("Cannot change radix key after construction has started");
@@ -144,6 +158,11 @@ where
         self
     }
 
+    /// Number of bits to use for keys in the radix table.
+    ///
+    /// # Panics
+    ///
+    /// This value cannot be changed after data has started to be input into the spline.
     pub fn radix_bits(&mut self, radix_bits: u64) -> &mut Self {
         if self.current_key_count > 0 {
             panic!("Cannot change radix key after construction has started");
@@ -157,6 +176,15 @@ where
         self
     }
 
+    /// Adds a sequence of keys to the spline
+    ///
+    /// # Panics
+    ///
+    /// The follow constraints must be met for each key or the builder will panic:
+    ///
+    /// 1. Data must be sorted in ascending order
+    /// 2. No element must be less than the minimum key value
+    /// 3. No element must be greater than the maximum key value
     pub fn add_keys(&mut self, it: impl Iterator<Item = K>) -> &mut Self {
         for key in it {
             self.add_key(key);
@@ -164,6 +192,15 @@ where
         self
     }
 
+    /// Adds a key to the spline calculation.
+    ///
+    /// # Panics
+    ///
+    /// The follow constraints must be met or the builder will panic:
+    ///
+    /// 1. Data must be sorted in ascending order
+    /// 2. No element must be less than the minimum key value
+    /// 3. No element must be greater than the maximum key value
     pub fn add_key(&mut self, key: K) -> &mut Self {
         assert!(key >= self.min_key);
         assert!(key <= self.max_key);
@@ -292,6 +329,7 @@ where
         }
     }
 
+    /// Construct the RadixSpline from the provided data.
     pub fn build(mut self) -> RadixSpline<K> {
         self.finalize();
 
@@ -331,6 +369,7 @@ fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
     }
 }
 
+/// Convenience trait for the spline key.
 pub trait Key: num_traits::PrimInt + num_traits::Unsigned + std::fmt::Debug {
     fn to_f64(self) -> f64;
 }

@@ -330,6 +330,7 @@ where
     }
 
     /// Construct the RadixSpline from the provided data.
+    #[must_use]
     pub fn build(mut self) -> RadixSpline<K> {
         self.finalize();
 

@@ -2,14 +2,6 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use radix_spline::RadixSpline;
 use std::hint::black_box;
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
-    }
-}
-
 fn spline_lookup(c: &mut Criterion) {
     let mut data = (0..100).collect::<Vec<u64>>();
     data.extend(200..300);

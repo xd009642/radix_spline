@@ -55,8 +55,8 @@ where
             let up = self.spline_points[index];
 
             let dx = (up.0 - down.0).to_f64();
-            let dy = up.1 - down.1;
-            let slope = dy / dx;
+            let dy = up.1.algebraic_sub(down.1);
+            let slope = dy.algebraic_div(dx);
 
             let dk = (key - down.0).to_f64();
             dk.mul_add(slope, down.1)
@@ -86,8 +86,8 @@ where
     /// Given a point output a range which contains that value.
     pub fn find(&self, key: K) -> Range<usize> {
         let est_pos = self.estimated_position(key);
-        let begin = (est_pos - self.max_error).max(0.0) as usize;
-        let end = ((est_pos + self.max_error) as usize + 2).min(self.current_key_count);
+        let begin = est_pos.algebraic_sub(self.max_error).max(0.0) as usize;
+        let end = (est_pos.algebraic_add(self.max_error) as usize + 2).min(self.current_key_count);
         begin..end
     }
 }
@@ -232,8 +232,8 @@ where
         self.distinct_key_count += 1;
 
         if self.distinct_key_count == 2 {
-            self.upper_limit = (key, position + self.max_error);
-            let lower = (position - self.max_error).max(0.0);
+            self.upper_limit = (key, position.algebraic_add(self.max_error));
+            let lower = position.algebraic_sub(self.max_error).max(0.0);
             self.lower_limit = (key, lower);
             self.previous_point = (key, position);
             return;
@@ -241,8 +241,8 @@ where
 
         let (last_point, last_distance) = self.spline_points.last().copied().unwrap();
 
-        let upper_y = position + self.max_error;
-        let lower_y = (position - self.max_error).max(0.0);
+        let upper_y = position.algebraic_add(self.max_error);
+        let lower_y = position.algebraic_sub(self.max_error).max(0.0);
 
         assert!(self.upper_limit.0 >= last_point);
         assert!(self.lower_limit.0 >= last_point);
@@ -255,9 +255,9 @@ where
         assert!(self.upper_limit.1 >= last_distance);
         assert!(position >= last_distance);
 
-        let upper_limit_dy = self.upper_limit.1 - last_distance;
-        let lower_limit_dy = self.lower_limit.1 - last_distance;
-        let dy = position - last_distance;
+        let upper_limit_dy = self.upper_limit.1.algebraic_sub(last_distance);
+        let lower_limit_dy = self.lower_limit.1.algebraic_sub(last_distance);
+        let dy = position.algebraic_sub(last_distance);
 
         let upper_limit = (upper_limit_dx, upper_limit_dy);
         let lower_limit = (lower_limit_dx, lower_limit_dy);
@@ -274,12 +274,12 @@ where
             self.lower_limit = (key, lower_y);
         } else {
             assert!(upper_y >= last_distance);
-            let upper_dy = upper_y - last_distance;
+            let upper_dy = upper_y.algebraic_sub(last_distance);
             if compute_orientation(upper_limit, (dx.to_f64(), upper_dy)) == Orientation::Clockwise {
                 self.upper_limit = (key, upper_y);
             }
 
-            let lower_dy = lower_y - last_distance;
+            let lower_dy = lower_y.algebraic_sub(last_distance);
             if compute_orientation(lower_limit, (dx.to_f64(), lower_dy))
                 == Orientation::AntiClockwise
             {
@@ -360,7 +360,7 @@ fn num_shift_bits<K: Key>(diff: K, radix_bits: u64) -> usize {
 }
 
 fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
-    let expr = p1.1.mul_add(p2.0, -(p2.1 * p1.0));
+    let expr = p1.1.mul_add(p2.0, -p2.1.algebraic_mul(p1.0));
     if expr > f64::EPSILON {
         Orientation::Clockwise
     } else if expr < -f64::EPSILON {

@@ -1,5 +1,11 @@
 #![doc = include_str!("../README.md")]
-use std::ops::Range;
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{vec, vec::Vec};
+use core::fmt::Debug;
+use core::ops::Range;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Orientation {
@@ -39,9 +45,9 @@ where
 
     /// Current memory used by the structure. This is useful for benchmarking on storage efficiency.
     pub fn size_in_bytes(&self) -> usize {
-        std::mem::size_of::<Self>()
-            + self.radix_table.capacity() * std::mem::size_of::<u32>()
-            + self.spline_points.capacity() * std::mem::size_of::<(K, f64)>()
+        core::mem::size_of::<Self>()
+            + self.radix_table.capacity() * core::mem::size_of::<u32>()
+            + self.spline_points.capacity() * core::mem::size_of::<(K, f64)>()
     }
 
     fn estimated_position(&self, key: K) -> f64 {
@@ -59,7 +65,7 @@ where
             let slope = dy / dx;
 
             let dk = (key - down.0).to_f64();
-            dk.mul_add(slope, down.1)
+            dk * slope + down.1
         }
     }
 
@@ -360,7 +366,7 @@ fn num_shift_bits<K: Key>(diff: K, radix_bits: u64) -> usize {
 }
 
 fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
-    let expr = p1.1.mul_add(p2.0, -(p2.1 * p1.0));
+    let expr = p1.1 * p2.0 - (p2.1 * p1.0);
     if expr > f64::EPSILON {
         Orientation::Clockwise
     } else if expr < -f64::EPSILON {
@@ -371,7 +377,7 @@ fn compute_orientation(p1: (f64, f64), p2: (f64, f64)) -> Orientation {
 }
 
 /// Convenience trait for the spline key.
-pub trait Key: num_traits::PrimInt + num_traits::Unsigned + std::fmt::Debug {
+pub trait Key: num_traits::PrimInt + num_traits::Unsigned + Debug {
     fn to_f64(self) -> f64;
 }
 

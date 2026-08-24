@@ -1,6 +1,6 @@
 [package]
 name = "radix_spline"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
@@ -8,12 +8,12 @@ repository = "https://github.com/xd009642/radix_spline"
 documentation = "https://docs.rs/radix_spline/"
 description = "Implementation of Radix Spline data structure."
 keywords = ["learned-index", "radix-spline", "data-structure", "sorted-data", "search"]
-categories = ["algorithms", "data-structures", "database-implementations"]
+categories = ["algorithms", "data-structures", "database-implementations", "no-std"]
 include = ["src/lib.rs", "LICENSE", "README.md"]
 
 [dependencies]
-num-traits = "0.2.19"
-serde = { version = "1.0", features = ["derive"], optional = true }
+num-traits = { version = "0.2.19", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["alloc", "derive"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8.2", features = ["html_reports"] }

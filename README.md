@@ -7,6 +7,8 @@ so anyone depending on it should consider just vendoring the implementation.
 
 A C API is provided via the radix_spline_c subproject.
 
+This crate supports `no_std` but requires alloc as it uses `Vec` internally.
+
 ## Performance
 
 The synthetic 200M and Wikipedia 200M datasets on SOSD (Search On Sorted Data)

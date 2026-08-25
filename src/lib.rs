@@ -3,6 +3,9 @@
 
 extern crate alloc;
 
+#[cfg(test)]
+extern crate std;
+
 use alloc::{vec, vec::Vec};
 use core::fmt::Debug;
 use core::ops::Range;
@@ -398,6 +401,7 @@ mod tests {
     use super::*;
     use hegel::TestCase;
     use hegel::generators::{self as gs, Generator};
+    use std::{format, string::ToString};
 
     #[test]
     fn basic_behavioural() {

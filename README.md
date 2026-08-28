@@ -15,7 +15,7 @@ The synthetic 200M and Wikipedia 200M datasets on SOSD (Search On Sorted Data)
 are used to benchmark. As the C API currently takes a contiguous array of keys
 I modified the benchmark to do the same for the C++ version. I then disabled -ffast-math
 and enabled -Ctarget-cpu=native on the Rust version so their two compiler flags
-were equivalent. When ffast-math is enabled the C++ version maintains a firm lead.
+were equivalent.
 
 Checking on the synthetic 200M entry dataset the results are:
 
@@ -26,8 +26,9 @@ to construct the object and box it added a layer of indirection. In comparison t
 original implementation can benefit from inlining and lesser indirection from the
 harness code. 
 
-Contrastingly, I'm happy the index size is a consistent 8 bytes smaller (likely due to
-padding).
+Contrastingly, I'm happy the index size is a consistent 24 bytes smaller due to using
+`Box<[T]>` instead of a `Vec<T>` in the constructed spline removing the unnecessary 
+capacity.
 
 Running on the 200M wikipedia dataset we can see the lookup latency isn't as clear:
 

@@ -6,8 +6,8 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
-use alloc::{vec, vec::Vec};
 use alloc::boxed::Box;
+use alloc::{vec, vec::Vec};
 use core::fmt::Debug;
 use core::ops::Range;
 

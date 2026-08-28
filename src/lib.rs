@@ -7,6 +7,7 @@ extern crate alloc;
 extern crate std;
 
 use alloc::{vec, vec::Vec};
+use alloc::boxed::Box;
 use core::fmt::Debug;
 use core::ops::Range;
 
@@ -33,8 +34,8 @@ pub struct RadixSpline<K> {
     current_key_count: usize,
     shift_bits: usize,
     max_error: f64,
-    radix_table: Vec<u32>,
-    spline_points: Vec<(K, f64)>,
+    radix_table: Box<[u32]>,
+    spline_points: Box<[(K, f64)]>,
 }
 
 impl<K> RadixSpline<K>
@@ -49,8 +50,8 @@ where
     /// Current memory used by the structure. This is useful for benchmarking on storage efficiency.
     pub fn size_in_bytes(&self) -> usize {
         core::mem::size_of::<Self>()
-            + self.radix_table.capacity() * core::mem::size_of::<u32>()
-            + self.spline_points.capacity() * core::mem::size_of::<(K, f64)>()
+            + self.radix_table.len() * core::mem::size_of::<u32>()
+            + self.spline_points.len() * core::mem::size_of::<(K, f64)>()
     }
 
     fn estimated_position(&self, key: K) -> f64 {
@@ -343,18 +344,14 @@ where
     pub fn build(mut self) -> RadixSpline<K> {
         self.finalize();
 
-        // Avoid having a too large data structure
-        self.spline_points.shrink_to_fit();
-        self.radix_table.shrink_to_fit();
-
         RadixSpline {
             min_key: self.min_key,
             max_key: self.max_key,
             current_key_count: self.current_key_count,
             shift_bits: self.shift_bits,
             max_error: self.max_error,
-            radix_table: self.radix_table,
-            spline_points: self.spline_points,
+            radix_table: self.radix_table.into_boxed_slice(),
+            spline_points: self.spline_points.into_boxed_slice(),
         }
     }
 }
